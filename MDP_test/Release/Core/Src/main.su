@@ -1,0 +1,12 @@
+main.c:759:6:StartDefaultTask	8	static
+main.c:784:6:show	32	static
+main.c:1214:6:servo	8	static
+main.c:1066:6:Encoder	56	static
+main.c:230:6:SystemClock_Config	72	static,ignoring_inline_asm
+main.c:133:5:main	112	static,ignoring_inline_asm
+main.c:587:6:HAL_UART_RxCpltCallback	8	static
+main.c:599:7:substring	12	static
+main.c:614:6:driveDistance	56	static
+main.c:684:6:turnAngle	32	static
+main.c:806:6:motor	64	static
+main.c:1279:6:Error_Handler	0	static,ignoring_inline_asm

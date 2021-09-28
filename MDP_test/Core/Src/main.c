@@ -111,7 +111,7 @@ void servo(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t aRxBuffer[9999];
+uint8_t aRxBuffer[10];
 char choice;
 int i = 0; //for switch case in motor
 int sep_index = 0;
@@ -162,7 +162,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   OLED_Init();
 
-  HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,9999);
+  HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,10);
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -591,7 +591,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 	//put what to transmit into buffer
 	HAL_UART_Transmit(&huart3,(uint8_t *) aRxBuffer,10,0xFFFF);
-	memset(aRxBuffer, 0, sizeof(aRxBuffer)); // Reset array
+	HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,10);
+	i=0;
+	//memset(aRxBuffer, 0, sizeof(aRxBuffer)); // Reset array
 
 }
 
@@ -826,8 +828,8 @@ void motor(void *argument)
 //			  sep_index = 0;
 //			  i = 0;
 //		  }
-		  i=0;
-		  HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,10);
+		  //i=0;
+		  //HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,4);
 
 		  for (int ii=0; ii<10; ii++){
 			  if (aRxBuffer[i+ii] == '|') {

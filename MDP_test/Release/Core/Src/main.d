@@ -33,7 +33,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3/portmacro.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h \
- C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/oled.h
+ C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oled.h
 
 ../Core/Inc/main.h:
 
@@ -105,4 +105,4 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 
 ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h:
 
-C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/oled.h:
+C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oled.h:

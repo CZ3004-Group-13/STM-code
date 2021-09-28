@@ -590,7 +590,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	UNUSED(huart);
 
 	//put what to transmit into buffer
-	HAL_UART_Transmit(&huart3,(uint8_t *) aRxBuffer,10,0xFFFF);
+	//HAL_UART_Transmit(&huart3,(uint8_t *) aRxBuffer,10,0xFFFF);
 	HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,10);
 	i=0;
 	//memset(aRxBuffer, 0, sizeof(aRxBuffer)); // Reset array
@@ -613,8 +613,8 @@ char* substring(char *destination, const char *source, int beg, int n){
 	return destination;
 }
 
-void driveDistance(float distance, uint16_t A, uint16_t B){
-	int offset = 5;
+void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
+	int offset = 3;
 	uint16_t pwmValA = A;
 	uint16_t pwmValB = B;
 	uint32_t tick;
@@ -622,6 +622,7 @@ void driveDistance(float distance, uint16_t A, uint16_t B){
 
 	long leftcount = 0;
 	long rightcount = 0;
+	long currentcount = 0;
 	long prevleftcount = 0;
 	long prevrightcount = 0;
 	long leftdiff, rightdiff;
@@ -641,19 +642,40 @@ void driveDistance(float distance, uint16_t A, uint16_t B){
 	__HAL_TIM_SET_COUNTER(&htim3,0);
 	osDelay(100);
 
-	 HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
-	 HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
+	if(direction == 1){ //forward
+		HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
+		HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
 
-	 HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_SET); //AIN1 ON
-	 HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_RESET); //AIN2 OFF
+		HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_SET); //AIN1 ON
+		HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_RESET); //AIN2 OFF
 
-	 // Modify the comparison value for the duty cycle
-	 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
-	 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+		// Modify the comparison value for the duty cycle
+		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
+		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+	}
+	else if(direction == 0){
+		HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_RESET); //AIN2 OFF
+		HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_SET); //AIN1 ON
+
+		HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_RESET); //AIN1 OFF
+		HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_SET); //AIN2 ON
+
+		// Modify the comparison value for the duty cycle
+		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
+		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+	}
+
 
 	 tick = HAL_GetTick(); //Provides a tick value in millisecond
 
-	 while(leftcount<targetcount){
+	 if(direction == 1){ //if forward use leftcount
+		 currentcount = leftcount;
+	 }
+	 else if(direction == 0){ //if backward use rightcount
+		 currentcount = rightcount;
+	 }
+
+	 while(currentcount<targetcount){
 		 if(HAL_GetTick()-tick > 100L){
 			 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
 			 rightcount = __HAL_TIM_GET_COUNTER(&htim3);
@@ -674,6 +696,13 @@ void driveDistance(float distance, uint16_t A, uint16_t B){
 			 }
 			 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 			 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+
+			 if(direction == 1){ //if forward use leftcount
+				 currentcount = leftcount;
+			 }
+			 else if(direction == 0){ //if backward use rightcount
+				 currentcount = rightcount;
+			 }
 			 tick = HAL_GetTick();
 		 }
 	 }
@@ -695,11 +724,24 @@ void turnAngle(float degree, int direction){ //direction 0 for left, 1 for right
 	float countsPerRev = 1290; //cntA value per wheel revolution
 	float wheelDiam = 6.43;
 	float wheelCirc = PI * wheelDiam;
-	float turningRad = 12.75;
+//	float turningRad = 12.75 ;
+//	float correction = 0;
 
-	float correction = 1.5;
+//	if(direction == 1){
+//		correction = 1.80;
+//	}
+//	else if(direction == 0){
+//		correction = 7;
+//	}
+	float distance;
 
-	float distance = (2 * PI * turningRad * (degree/360.0)) + correction;
+	//float distance = (2 * PI * turningRad * (degree/360.0)) + correction;
+	if(direction == 0){ //left
+		distance = 33.5;
+	}
+	else if(direction == 1){ //right
+		distance = 32.75;
+	}
 	float numRev = distance/wheelCirc;
 	float targetcount = numRev * countsPerRev;
 
@@ -717,8 +759,8 @@ void turnAngle(float degree, int direction){ //direction 0 for left, 1 for right
 	 tick = HAL_GetTick(); //Provides a tick value in millisecond
 
 	 if(direction == 0){ //left turn
-		 pwmValA = 500;
-		 pwmValB = 1500;
+		 pwmValA = 1500; //500
+		 pwmValB = 1500; //1500
 
 		 // Modify the comparison value for the duty cycle
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
@@ -732,7 +774,7 @@ void turnAngle(float degree, int direction){ //direction 0 for left, 1 for right
 	 }
 	 else if(direction == 1){ //right turn
 		 pwmValA = 1500;
-		 pwmValB = 500;
+		 pwmValB = 1500;
 
 		 // Modify the comparison value for the duty cycle
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
@@ -813,7 +855,7 @@ void motor(void *argument)
 	  uint16_t pwmValA = 0;
 	  uint16_t pwmValB = 0;
 	  choice = aRxBuffer[i];
-	  uint8_t ch = 'A';
+	  uint8_t done[] = "done";
 	  float dist;
 
 	  HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_1); //start motorA
@@ -836,6 +878,7 @@ void motor(void *argument)
 				  sep_index = i+ii;
 			  }
 		  }
+		  //sep_index=i+1;
 		  if (sep_index <= i) {
 			  continue;
 		  }
@@ -850,82 +893,52 @@ void motor(void *argument)
 
 		  switch(choice)
 		  {
-		  	  case 'f': //forward slow
-				  pwmValA=1500;
-				  pwmValB=500;
-				     //AIN2_Pin|AIN1_Pin;
-					 HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
-					 HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
+		  	  case 'w': //forward by dist
+		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
+		  		  driveDistance(dist,1500,1500,1);
+		  		  i = sep_index + 1;
+		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
+		  		  break;
 
-					 HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_SET); //AIN1 ON
-					 HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_RESET); //AIN2 OFF
+		  	  case 'f': //forward
+		  		  pwmValA=800;
+				  pwmValB=800;
+				  //AIN2_Pin|AIN1_Pin;
+				  HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
+				  HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
 
-					 // Modify the comparison value for the duty cycle
-					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
-					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+				  HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_SET); //AIN1 ON
+				  HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_RESET); //AIN2 OFF
 
-					 osDelay(10); //comment out on forward assessment
+				  // Modify the comparison value for the duty cycle
+				  __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
+				  __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 
-//					 while(1){
-//						 if(totalA>330){
-//		 					 pwmValA=0;
-//		 					 pwmValB=0;
-//		 					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
-//		 					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
-//
-//							 break;
-//						 }
-//					 }
-
-
-					 //FORWARD ASSESSMENT START
-//					 osDelay(12000);
-//					 pwmValA=0;
-//					 pwmValB=0;
-//					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
-//					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
-					 //FORWARD ASSESSMENT END
-
-
-//				  pwmVal = 0;
-//					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmVal);
-//					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmVal);
-//				  i++;
-				  i = sep_index + 1;
-				  //choice = aRxBuffer[i];
-
-				  //choice = 2;
+		  		  i = sep_index + 1;
+				  osDelay(10); //comment out on forward assessment
 				  break;
 
-		  	  case 'F': //forward medium
-				  pwmValA=880;
-				  pwmValB=700;
-				     //AIN2_Pin|AIN1_Pin;
-					 HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
-					 HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
+		  	  case 's': //backward by dist
+		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
+		  		  driveDistance(dist,1500,1500,0);
+		  		  i = sep_index + 1;
+		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
+		  		  break;
 
-					 HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_SET); //AIN1 ON
-					 HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_RESET); //AIN2 OFF
+		  	  case 'b': //backward
+		  		  pwmValA=800;
+		  		  pwmValB=800;
+		  		  HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_RESET); //AIN2 OFF
+		  		  HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_SET); //AIN1 ON
 
-					 // Modify the comparison value for the duty cycle
-					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
-					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+		  		  HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_RESET); //AIN1 OFF
+		  		  HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_SET); //AIN2 ON
+		  		  pwmVal++;
+		  		  // Modify the comparison value for the duty cycle
+		  		  __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
+		  		  __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 
-					 osDelay(10); //comment out on forward assessment
-
-		  	  case 'b': //backwards
-		  		  pwmVal=800;
-						 HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_RESET); //AIN2 OFF
-						 HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_SET); //AIN1 ON
-
-						 HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_RESET); //AIN1 OFF
-						 HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_SET); //AIN2 ON
-						 pwmVal++;
-						 // Modify the comparison value for the duty cycle
-						 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmVal);
-						 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmVal);
-
-						 osDelay(10);
+		  		  osDelay(10);
 
 //		  		  pwmVal = 0;
 //					 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmVal);
@@ -933,124 +946,158 @@ void motor(void *argument)
 
 //		  		  i++;
 		  		  i = sep_index + 1;
-				  //choice = aRxBuffer[i];
+		  		  break;
 
-					 break;
-
-		  	  case 's':
-		  		  	pwmVal = 0;
+		  	  case 'x':
+		  		  pwmValA = 0;
+		  		  pwmValB = 0;
 //		  			HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_RESET); //AIN2 ON
 //		  			HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
 //
 //					 HAL_GPIO_WritePin(GPIOA,BIN2_Pin,GPIO_PIN_RESET); //AIN1 ON
 //					 HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_RESET); //AIN2 OFF
 
-		  			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmVal);
-		  			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmVal);
+		  			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
+		  			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 		  			//osDelay(10);
 
 //					 i++;
 					 i = sep_index + 1;
-					 //choice = aRxBuffer[i];
 					 break;
 
-		  	  case 'a': //test
+		  	  case 'a': //turn left 90
 		  		  //
-//		  		  turnAngle(180,1);
-//		  		  i++;
-		  		  //dist = atof(temp);
-		  		  driveDistance(dist,800,800);
+		  		  htim1.Instance->CCR4 = 54;   //extreme left
+		  		  osDelay(10);
+
+		  		  turnAngle(90,0);
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 73; //center
+		  		  osDelay(10);
+
 		  		  i = sep_index + 1;
+		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  		  break;
 
-		  	  case 't': //test
+		  	  case 'd': //turn right 90
 		  		  //
+		  		  htim1.Instance->CCR4 = 98; //extreme right
+		  		  osDelay(10);
+
 		  		  turnAngle(90,1);
-//		  		  i++;
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 73; //center
+		  		  osDelay(10);
+
 		  		  i = sep_index + 1;
-//		  		  driveDistance(dist,800,800);
-//		  		  i+=3;
+		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  		  break;
 
-		  	case 'g':  //aQCcWCbBC
-				pwmValA = 800;
-				pwmValB = 825;
-				HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_SET);
-				__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-				__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-		  		osDelay(3000);
+		  	  case'r':
+					htim1.Instance->CCR4 = 98; //extreme right 98
+					osDelay(10);
+			  		i = sep_index + 1;
+					//choice = aRxBuffer[i];
+					break;
 
-	  	        pwmValA = pwmValB = 0;
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-	  	        osDelay(1000);
+		  	  case 'l':
+					htim1.Instance->CCR4 = 54;   //extreme left 54
+					osDelay(10);
+					i = sep_index + 1;
+					//choice = aRxBuffer[i];
+					break;
 
-		  		htim1.Instance->CCR4 = 94;
-	  	        osDelay(1000);
-
-	  	        pwmValA = 800;
-	  	        pwmValB = 825;
-	  	        HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_SET);
-	  	        HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_RESET);
-	  	        HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_SET);
-	  	        HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_RESET);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-	  	        osDelay(7800);
-
-	  	        pwmValA = pwmValB = 0;
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-	  	        osDelay(1000);
-
-	  	        htim1.Instance->CCR4 = 51;
-	  	        osDelay(1000);
-
-	  	        pwmValA = 770; //800
-	  	        pwmValB = 875; //825
-	  	        HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_SET);
-	  	        HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_RESET);
-	  	        HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_SET);
-	  	        HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_RESET);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-	  	        osDelay(11500);
-
-	  	        pwmValA = pwmValB = 0;
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-	  	        osDelay(500);
-
-	  	        htim1.Instance->CCR4 = 81;
-	  	        osDelay(250);
-	  	        htim1.Instance->CCR4 = 73;
-
-	  	        pwmValA = 800;
-	  	        pwmValB = 825; //825
-	  	        HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_SET);
-	  	        HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_RESET);
-	  	        HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_SET);
-	  	        HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_RESET);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-	  	        osDelay(1000);
-
-	  	        pwmValA = pwmValB = 0;
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
-	  	        __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
-
-//	  	        i++;
-	  	        i = sep_index + 1;
-	  	        HAL_UART_Transmit(&huart3,(uint8_t *)&ch,1,0xFFFF);
-	  	        break;
-
-		  	  default:
-		  		  //i++;
-				 // choice = aRxBuffer[i];
-		  		  break;
+		  	  case 'c':
+		  			htim1.Instance->CCR4 = 81; //right
+		  			osDelay(500);
+		  			htim1.Instance->CCR4 = 73; //center
+		  			osDelay(10);
+		  			i = sep_index + 1;
+					//choice = aRxBuffer[i];
+					break;
+//		  	  case 'g':  //aQCcWCbBC
+//					pwmValA = 800;
+//					pwmValB = 825;
+//					HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_RESET);
+//					HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_SET);
+//					HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_RESET);
+//					HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_SET);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					osDelay(3000);
+//
+//					pwmValA = pwmValB = 0;
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//					osDelay(1000);
+//
+//					htim1.Instance->CCR4 = 94;
+//					osDelay(1000);
+//
+//					pwmValA = 800;
+//					pwmValB = 825;
+//					HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_SET);
+//					HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_RESET);
+//					HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_SET);
+//					HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_RESET);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					osDelay(7800);
+//
+//					pwmValA = pwmValB = 0;
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//					osDelay(1000);
+//
+//					htim1.Instance->CCR4 = 51;
+//					osDelay(1000);
+//
+//					pwmValA = 770; //800
+//					pwmValB = 875; //825
+//					HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_SET);
+//					HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_RESET);
+//					HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_SET);
+//					HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_RESET);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					osDelay(11500);
+//
+//					pwmValA = pwmValB = 0;
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//					osDelay(500);
+//
+//					htim1.Instance->CCR4 = 81;
+//					osDelay(250);
+//					htim1.Instance->CCR4 = 73;
+//
+//					pwmValA = 800;
+//					pwmValB = 825; //825
+//					HAL_GPIO_WritePin(GPIOA, AIN2_Pin, GPIO_PIN_SET);
+//					HAL_GPIO_WritePin(GPIOA, AIN1_Pin, GPIO_PIN_RESET);
+//					HAL_GPIO_WritePin(GPIOA, BIN2_Pin, GPIO_PIN_SET);
+//					HAL_GPIO_WritePin(GPIOA, BIN1_Pin, GPIO_PIN_RESET);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					osDelay(1000);
+//
+//					pwmValA = pwmValB = 0;
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, pwmValA);
+//					__HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_2, pwmValB);
+//
+//
+//					i = sep_index + 1;
+//					HAL_UART_Transmit(&huart3,(uint8_t *)&ch,1,0xFFFF);
+//					break;
+//
+				  default:
+					  //i++;
+					 // choice = aRxBuffer[i];
+					  break;
 		  }
 
 	  }
@@ -1221,31 +1268,31 @@ void servo(void *argument)
 	  choice = aRxBuffer[i];
 	for(;;)
   {
-		  HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,10);
+		  //HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,10);
 		  choice = aRxBuffer[i];
 	  switch(choice)
 	  {
-	  	  case'r':
-				htim1.Instance->CCR4 = 98; //extreme right
-				osDelay(10);
-  				i++;
-				//choice = aRxBuffer[i];
-				break;
-
-	  	  case 'l':
-				htim1.Instance->CCR4 = 54;   //extreme left
-				osDelay(10);
-				i++;
-				//choice = aRxBuffer[i];
-				break;
-	  	  case 'c':
-	  			htim1.Instance->CCR4 = 81; //right
-	  			osDelay(500);
-	  			htim1.Instance->CCR4 = 73; //center
-	  			osDelay(10);
-	  			i++;
-				//choice = aRxBuffer[i];
-				break;
+//	  	  case'r':
+//				htim1.Instance->CCR4 = 98; //extreme right
+//				osDelay(10);
+//		  		i = sep_index + 1;
+//				//choice = aRxBuffer[i];
+//				break;
+//
+//	  	  case 'l':
+//				htim1.Instance->CCR4 = 54;   //extreme left
+//				osDelay(10);
+//				i = sep_index + 1;
+//				//choice = aRxBuffer[i];
+//				break;
+//	  	  case 'c':
+//	  			htim1.Instance->CCR4 = 81; //right
+//	  			osDelay(500);
+//	  			htim1.Instance->CCR4 = 73; //center
+//	  			osDelay(10);
+//	  			i = sep_index + 1;
+//				//choice = aRxBuffer[i];
+//				break;
 
 	  	  //default:
 	  		  //i++;

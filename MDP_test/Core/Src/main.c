@@ -614,7 +614,7 @@ char* substring(char *destination, const char *source, int beg, int n){
 }
 
 void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
-	int offset = 3;
+	float offset = 0.0001;
 	uint16_t pwmValA = A;
 	uint16_t pwmValB = B;
 	uint32_t tick;
@@ -630,17 +630,12 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 //	float correction = -2.0;
 //	distance = distance + correction;
 
-	float countsPerRev = 1290; //cntA value per wheel revolution
+	float countsPerRev = 1320; //cntA value per wheel revolution (1320)
 	float wheelDiam = 6.43;
 	float wheelCirc = PI * wheelDiam;
 
 	float numRev = distance/wheelCirc;
 	float targetcount = numRev * countsPerRev;
-
-	//reset counter values
-	__HAL_TIM_SET_COUNTER(&htim2,0);
-	__HAL_TIM_SET_COUNTER(&htim3,0);
-	osDelay(100);
 
 	if(direction == 1){ //forward
 		HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
@@ -666,8 +661,6 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 	}
 
 
-	 tick = HAL_GetTick(); //Provides a tick value in millisecond
-
 	 if(direction == 1){ //if forward use leftcount
 		 currentcount = leftcount;
 	 }
@@ -675,6 +668,11 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 		 currentcount = rightcount;
 	 }
 
+		//reset counter values
+		__HAL_TIM_SET_COUNTER(&htim2,0);
+		__HAL_TIM_SET_COUNTER(&htim3,0);
+		osDelay(250);
+		tick = HAL_GetTick(); //Provides a tick value in millisecond
 	 while(currentcount<targetcount){
 		 if(HAL_GetTick()-tick > 100L){
 			 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
@@ -686,13 +684,15 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 			 prevleftcount = leftcount;
 			 prevrightcount = rightcount;
 
+			 float error = abs(leftdiff - rightdiff);
+
 			 if(leftdiff>rightdiff){
-				 pwmValA = pwmValA - offset;
-				 pwmValB = pwmValB + offset;
+				 pwmValA = pwmValA - (offset*error);
+				 pwmValB = pwmValB + (offset*error);
 			 }
 			 else if(leftdiff<rightdiff){
-				 pwmValA = pwmValA + offset;
-				 pwmValB = pwmValB - offset;
+				 pwmValA = pwmValA + (offset*error);
+				 pwmValB = pwmValB - (offset*error);
 			 }
 			 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 			 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);

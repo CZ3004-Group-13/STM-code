@@ -23,6 +23,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include "pid.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -119,7 +120,6 @@ int totalA = 0; //for pulses in encoder
 int totalB = 0;
 //float dist; //in cm(used in motor)
 int angle; //in degrees(used in motor)
-float error;
 int cntA, cntB;
 
 
@@ -614,7 +614,8 @@ char* substring(char *destination, const char *source, int beg, int n){
 }
 
 void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
-	float offset = 0;
+	double offset = 0;
+	double error = 0;
 	uint16_t pwmValA = A;
 	uint16_t pwmValB = B;
 	uint32_t tick;
@@ -637,6 +638,15 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 	float numRev = distance/wheelCirc;
 	float targetcount = numRev * countsPerRev;
 
+///////////////////PID CONFIGURATION///////////////////////////////////////////////////////
+	PID_TypeDef pidControlDiff;
+
+	PID(&pidControlDiff, &error, &offset, 0, 150, 0, 1.4, _PID_P_ON_E, _PID_CD_DIRECT);
+	PID_SetMode(&pidControlDiff, _PID_MODE_AUTOMATIC);
+	PID_SetSampleTime(&pidControlDiff, 10);
+	PID_SetOutputLimits(&pidControlDiff, -400, 400);
+///////////////////////////////////////////////////////////////////////////////////////////
+
 	if(direction == 1){ //forward
 		HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
 		HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
@@ -645,8 +655,8 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 		HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_RESET); //AIN2 OFF
 
 		// Modify the comparison value for the duty cycle
-		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
-		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+//		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
+//		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 	}
 	else if(direction == 0){
 		HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_RESET); //AIN2 OFF
@@ -656,8 +666,8 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 		HAL_GPIO_WritePin(GPIOA,BIN1_Pin,GPIO_PIN_SET); //AIN2 ON
 
 		// Modify the comparison value for the duty cycle
-		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
-		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+//		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
+//		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 	}
 
 
@@ -678,22 +688,43 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 			 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
 			 rightcount = __HAL_TIM_GET_COUNTER(&htim3);
 
-			 leftdiff = abs(leftcount - prevleftcount);
-			 rightdiff = abs(rightcount - prevrightcount);
+//			 leftdiff = abs(leftcount - prevleftcount);
+//			 rightdiff = abs(rightcount - prevrightcount);
+//
+//			 prevleftcount = leftcount;
+//			 prevrightcount = rightcount;
+//
+//			 error = abs(leftdiff - rightdiff);
 
-			 prevleftcount = leftcount;
-			 prevrightcount = rightcount;
-
-			 error = abs(leftdiff - rightdiff);
-
-			 if(leftdiff>rightdiff){
-				 pwmValA = pwmValA - (offset*error);
-				 pwmValB = pwmValB + (offset*error);
+//////////////////////////PID PART//////////////////////////////////////////////////
+			 if(direction == 1){
+				 if(rightcount != 0){
+					 rightcount = 65535 - rightcount;
+				 }
+				 error = leftcount - rightcount;
 			 }
-			 else if(leftdiff<rightdiff){
-				 pwmValA = pwmValA + (offset*error);
-				 pwmValB = pwmValB - (offset*error);
+			 else if(direction == 0){
+				 if(leftcount != 0){
+					 leftcount = 65535 - leftcount;
+				 }
+				 error = leftcount - rightcount;
 			 }
+
+			 //pid computation
+			 PID_Compute(&pidControlDiff);
+
+			 //update pwmValue
+			 pwmValA = pwmValA + offset;
+			 pwmValB = pwmValB - offset;
+//////////////////////////////////////////////////////////////////////////////
+//			 if(leftdiff>rightdiff){
+//				 pwmValA = pwmValA - (offset*error);
+//				 pwmValB = pwmValB + (offset*error);
+//			 }
+//			 else if(leftdiff<rightdiff){
+//				 pwmValA = pwmValA + (offset*error);
+//				 pwmValB = pwmValB - (offset*error);
+//			 }
 			 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 			 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 
@@ -896,7 +927,7 @@ void motor(void *argument)
 		  {
 		  	  case 'w': //forward by dist
 		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
-		  		  driveDistance(dist,2200,2000,1); //1900,2160 leaning right
+		  		  driveDistance(dist,3000,3000,1); //2200,2000 hardcode
 
 		  		  i = sep_index + 1;
 
@@ -928,7 +959,7 @@ void motor(void *argument)
 
 		  	  case 's': //backward by dist
 		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
-		  		  driveDistance(dist,2100,2000,0);
+		  		  driveDistance(dist,3000,3000,0); //2100,2000 hardcode
 		  		  i = sep_index + 1;
 
 		  		  htim1.Instance->CCR4 = 81; //right
@@ -996,7 +1027,7 @@ void motor(void *argument)
 //		  		  i = sep_index + 1;
 //		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 //		  		  break;
-		  		  driveDistance(9,1000,1000,1); //1900,2160
+		  		  driveDistance(9,2000,2000,1); //1900,2160
 
 		  		  htim1.Instance->CCR4 = 57; //extreme left once
 		  		  osDelay(10);
@@ -1007,7 +1038,7 @@ void motor(void *argument)
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(14,1000,1000,0); //reverse
+		  		  driveDistance(14,2000,2000,0); //reverse
 		  		  osDelay(100);
 
 		  		  htim1.Instance->CCR4 = 57; //extreme left twice
@@ -1019,7 +1050,7 @@ void motor(void *argument)
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(19,1000,1000,0); //reverse
+		  		  driveDistance(19,2000,2000,0); //reverse
 		  		  osDelay(100);
 
 		  		  htim1.Instance->CCR4 = 57; //extreme left thrice
@@ -1031,7 +1062,7 @@ void motor(void *argument)
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(9,1000,1000,0); //1900,2160
+		  		  driveDistance(9,2000,2000,0); //1900,2160
 
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
@@ -1039,7 +1070,7 @@ void motor(void *argument)
 
 		  	  case 'd': //turn right 90
 		  		  //
-		  		  driveDistance(9,1000,1000,1); //1900,2160
+		  		  driveDistance(9,2000,2000,1); //1900,2160
 
 		  		  htim1.Instance->CCR4 = 88; //extreme right once
 		  		  osDelay(10);
@@ -1050,7 +1081,7 @@ void motor(void *argument)
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(14,1000,1000,0); //reverse
+		  		  driveDistance(14,2000,2000,0); //reverse
 		  		  osDelay(100);
 
 		  		  htim1.Instance->CCR4 = 88; //extreme right twice
@@ -1062,19 +1093,19 @@ void motor(void *argument)
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(16,1000,1000,0); //reverse
+		  		  driveDistance(16,2000,2000,0); //reverse
 		  		  osDelay(100);
 
 		  		  htim1.Instance->CCR4 = 88; //extreme right thrice
 		  		  osDelay(10);
-		  		  turnAngle(19,1);
+		  		  turnAngle(17.5,1);
 
 		  		  htim1.Instance->CCR4 = 81; //right
 		  		  osDelay(500);
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(6,1000,1000,0); //1900,2160
+		  		  driveDistance(6,2000,2000,0); //1900,2160
 
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);

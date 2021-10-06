@@ -119,7 +119,7 @@ int totalA = 0; //for pulses in encoder
 int totalB = 0;
 //float dist; //in cm(used in motor)
 int angle; //in degrees(used in motor)
-
+float error;
 int cntA, cntB;
 
 
@@ -614,7 +614,7 @@ char* substring(char *destination, const char *source, int beg, int n){
 }
 
 void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
-	float offset = 0.0001;
+	float offset = 0;
 	uint16_t pwmValA = A;
 	uint16_t pwmValB = B;
 	uint32_t tick;
@@ -671,10 +671,10 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 		//reset counter values
 		__HAL_TIM_SET_COUNTER(&htim2,0);
 		__HAL_TIM_SET_COUNTER(&htim3,0);
-		osDelay(250);
+		//osDelay(100);
 		tick = HAL_GetTick(); //Provides a tick value in millisecond
 	 while(currentcount<targetcount){
-		 if(HAL_GetTick()-tick > 100L){
+		 if(HAL_GetTick()-tick > 50L){
 			 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
 			 rightcount = __HAL_TIM_GET_COUNTER(&htim3);
 
@@ -684,7 +684,7 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 			 prevleftcount = leftcount;
 			 prevrightcount = rightcount;
 
-			 float error = abs(leftdiff - rightdiff);
+			 error = abs(leftdiff - rightdiff);
 
 			 if(leftdiff>rightdiff){
 				 pwmValA = pwmValA - (offset*error);
@@ -704,7 +704,7 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 				 currentcount = rightcount;
 			 }
 			 tick = HAL_GetTick();
-		 }
+ 		 }
 	 }
 	 pwmValA = 0;
 	 pwmValB = 0;
@@ -712,7 +712,7 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 	 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 }
 
-void turnAngle(float degree, int direction){ //direction 0 for left, 1 for right
+void turnAngle(float distance, int direction){ //direction 0 for left, 1 for right
 	uint32_t tick;
 	 uint16_t pwmValA;
 	 uint16_t pwmValB;
@@ -733,15 +733,15 @@ void turnAngle(float degree, int direction){ //direction 0 for left, 1 for right
 //	else if(direction == 0){
 //		correction = 7;
 //	}
-	float distance;
+//	float distance;
 
 	//float distance = (2 * PI * turningRad * (degree/360.0)) + correction;
-	if(direction == 0){ //left
-		distance = 33.5;
-	}
-	else if(direction == 1){ //right
-		distance = 32.75;
-	}
+//	if(direction == 0){ //left
+//		distance = 33.75;
+//	}
+//	else if(direction == 1){ //right
+//		distance = 32.75;
+//	}
 	float numRev = distance/wheelCirc;
 	float targetcount = numRev * countsPerRev;
 
@@ -889,20 +889,28 @@ void motor(void *argument)
 		  substring(temp,aRxBuffer,i+1,sep_index-i-1);
 
 		  dist = atof(temp);
+		  //osDelay(10);
 		  //dist = 10;
 
 		  switch(choice)
 		  {
 		  	  case 'w': //forward by dist
 		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
-		  		  driveDistance(dist,1500,1500,1);
+		  		  driveDistance(dist,2200,2000,1); //1900,2160 leaning right
+
 		  		  i = sep_index + 1;
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  		  break;
 
 		  	  case 'f': //forward
-		  		  pwmValA=800;
-				  pwmValB=800;
+		  		  pwmValA=1000;
+				  pwmValB=1000;
 				  //AIN2_Pin|AIN1_Pin;
 				  HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_SET); //AIN2 ON
 				  HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_RESET); //AIN1 OFF
@@ -920,14 +928,20 @@ void motor(void *argument)
 
 		  	  case 's': //backward by dist
 		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
-		  		  driveDistance(dist,1500,1500,0);
+		  		  driveDistance(dist,2100,2000,0);
 		  		  i = sep_index + 1;
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  		  break;
 
 		  	  case 'b': //backward
-		  		  pwmValA=800;
-		  		  pwmValB=800;
+		  		  pwmValA=1000;
+		  		  pwmValB=1000;
 		  		  HAL_GPIO_WritePin(GPIOA,AIN2_Pin,GPIO_PIN_RESET); //AIN2 OFF
 		  		  HAL_GPIO_WritePin(GPIOA,AIN1_Pin,GPIO_PIN_SET); //AIN1 ON
 
@@ -959,6 +973,7 @@ void motor(void *argument)
 
 		  			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 		  			__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
+		  			HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  			//osDelay(10);
 
 //					 i++;
@@ -967,15 +982,56 @@ void motor(void *argument)
 
 		  	  case 'a': //turn left 90
 		  		  //
-		  		  htim1.Instance->CCR4 = 54;   //extreme left
-		  		  osDelay(10);
+//		  		  htim1.Instance->CCR4 = 54;   //extreme left
+//		  		  osDelay(10);
+//
+//		  		  turnAngle(33.75,0);
+//
+//		  		  htim1.Instance->CCR4 = 81; //right
+//		  		  osDelay(500);
+//		  		  htim1.Instance->CCR4 = 70; //center
+//		  		  osDelay(100);
+//
+//
+//		  		  i = sep_index + 1;
+//		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
+//		  		  break;
+		  		  driveDistance(9,1000,1000,1); //1900,2160
 
-		  		  turnAngle(90,0);
+		  		  htim1.Instance->CCR4 = 57; //extreme left once
+		  		  osDelay(10);
+		  		  turnAngle(14,0);
 
 		  		  htim1.Instance->CCR4 = 81; //right
 		  		  osDelay(500);
-		  		  htim1.Instance->CCR4 = 73; //center
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
+		  		  driveDistance(14,1000,1000,0); //reverse
+		  		  osDelay(100);
+
+		  		  htim1.Instance->CCR4 = 57; //extreme left twice
 		  		  osDelay(10);
+		  		  turnAngle(15,0);
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
+		  		  driveDistance(19,1000,1000,0); //reverse
+		  		  osDelay(100);
+
+		  		  htim1.Instance->CCR4 = 57; //extreme left thrice
+		  		  osDelay(10);
+		  		  turnAngle(26,0);
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
+		  		  driveDistance(9,1000,1000,0); //1900,2160
 
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
@@ -983,41 +1039,71 @@ void motor(void *argument)
 
 		  	  case 'd': //turn right 90
 		  		  //
-		  		  htim1.Instance->CCR4 = 98; //extreme right
-		  		  osDelay(10);
+		  		  driveDistance(9,1000,1000,1); //1900,2160
 
-		  		  turnAngle(90,1);
+		  		  htim1.Instance->CCR4 = 88; //extreme right once
+		  		  osDelay(10);
+		  		  turnAngle(14,1);
 
 		  		  htim1.Instance->CCR4 = 81; //right
 		  		  osDelay(500);
-		  		  htim1.Instance->CCR4 = 73; //center
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
+		  		  driveDistance(14,1000,1000,0); //reverse
+		  		  osDelay(100);
+
+		  		  htim1.Instance->CCR4 = 88; //extreme right twice
 		  		  osDelay(10);
+		  		  turnAngle(15,1);
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
+		  		  driveDistance(16,1000,1000,0); //reverse
+		  		  osDelay(100);
+
+		  		  htim1.Instance->CCR4 = 88; //extreme right thrice
+		  		  osDelay(10);
+		  		  turnAngle(19,1);
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
+		  		  driveDistance(6,1000,1000,0); //1900,2160
 
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  		  break;
 
 		  	  case'r':
-					htim1.Instance->CCR4 = 98; //extreme right 98
+					htim1.Instance->CCR4 = 88; //extreme right 98
 					osDelay(10);
 			  		i = sep_index + 1;
 					//choice = aRxBuffer[i];
+			  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 					break;
 
 		  	  case 'l':
-					htim1.Instance->CCR4 = 54;   //extreme left 54
+					htim1.Instance->CCR4 = 57;   //extreme left 54
 					osDelay(10);
 					i = sep_index + 1;
 					//choice = aRxBuffer[i];
+			  		   HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 					break;
 
 		  	  case 'c':
 		  			htim1.Instance->CCR4 = 81; //right
 		  			osDelay(500);
-		  			htim1.Instance->CCR4 = 73; //center
+		  			htim1.Instance->CCR4 = 70; //center
 		  			osDelay(10);
 		  			i = sep_index + 1;
 					//choice = aRxBuffer[i];
+			  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 					break;
 //		  	  case 'g':  //aQCcWCbBC
 //					pwmValA = 800;

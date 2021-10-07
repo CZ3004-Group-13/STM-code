@@ -1,4 +1,5 @@
-Core/Src/pid.o: ../Core/Src/pid.c ../Core/Inc/pid.h ../Core/Inc/main.h \
+PeripheralDriver/src/mpu9250.o: ../PeripheralDriver/src/mpu9250.c \
+ C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/mpu9250.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
@@ -26,9 +27,7 @@ Core/Src/pid.o: ../Core/Src/pid.c ../Core/Inc/pid.h ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 
-../Core/Inc/pid.h:
-
-../Core/Inc/main.h:
+C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/mpu9250.h:
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
 

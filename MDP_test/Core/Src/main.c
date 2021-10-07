@@ -23,11 +23,14 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-#include "pid.h"
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "oled.h"
+#include "mpu9250.h"
+#include "pid.h"
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +49,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
@@ -100,6 +105,7 @@ static void MX_TIM2_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_I2C1_Init(void);
 void StartDefaultTask(void *argument);
 void show(void *argument);
 void motor(void *argument);
@@ -121,6 +127,8 @@ int totalB = 0;
 //float dist; //in cm(used in motor)
 int angle; //in degrees(used in motor)
 int cntA, cntB;
+
+//#define q16  65536.0f
 
 
 
@@ -159,8 +167,10 @@ int main(void)
   MX_TIM1_Init();
   MX_USART3_UART_Init();
   MX_TIM3_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   OLED_Init();
+  MPU9250_Init(&hi2c1);
 
   HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,10);
   /* USER CODE END 2 */
@@ -216,7 +226,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+//	  data[0] = 0x75;
+//	  data[1] = 0x0;
+//	  HAL_I2C_Master_Transmit(&hi2c1, MPU9250_ADDR, &data[0], 1, 50);
+//	  HAL_I2C_Master_Receive(&hi2c1, MPU9250_ADDR, recvData, 1, 50);
+//
+//	  HAL_GPIO_WritePin(GPIOD, RLED_Pin, GPIO_PIN_RESET);
+//	  sprintf((char *)uartData, "0x%x\n", recvData[0]);
+//	  HAL_UART_Transmit(&huart1, uartData, 5, 50);
+//	  HAL_Delay(1000);
     /* USER CODE END WHILE */
+
 
     /* USER CODE BEGIN 3 */
   }
@@ -258,6 +278,40 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 400000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
 }
 
 /**
@@ -670,6 +724,10 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 //		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 	}
 
+	//reset counter values
+			__HAL_TIM_SET_COUNTER(&htim2,0);
+			__HAL_TIM_SET_COUNTER(&htim3,0);
+
 
 	 if(direction == 1){ //if forward use leftcount
 		 currentcount = leftcount;
@@ -678,9 +736,7 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 		 currentcount = rightcount;
 	 }
 
-		//reset counter values
-		__HAL_TIM_SET_COUNTER(&htim2,0);
-		__HAL_TIM_SET_COUNTER(&htim3,0);
+
 		//osDelay(100);
 		tick = HAL_GetTick(); //Provides a tick value in millisecond
 	 while(currentcount<targetcount){
@@ -797,7 +853,7 @@ void turnAngle(float distance, int direction){ //direction 0 for left, 1 for rig
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 		 while(leftcount<targetcount){ //count inner wheel distance travelled
-			 if(HAL_GetTick()-tick > 100L){
+			 if(HAL_GetTick()-tick > 100L){ //might need to change to 50
 				 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
 				 tick = HAL_GetTick();
 			 }
@@ -1064,6 +1120,11 @@ void motor(void *argument)
 
 		  		  driveDistance(9,2000,2000,0); //1900,2160
 
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
+
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  		  break;
@@ -1106,6 +1167,11 @@ void motor(void *argument)
 		  		  osDelay(100);
 
 		  		  driveDistance(6,2000,2000,0); //1900,2160
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
 
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
@@ -1254,7 +1320,7 @@ void Encoder(void *argument)
 	  {
 //		//trailing l makes the type of the constant
 //		//a long int instead of a regular int
-		if(HAL_GetTick()-tick > 250L){ //delay 250 ticks
+		if(HAL_GetTick()-tick > 1000L){ //delay 250 ticks
 			cntA = __HAL_TIM_GET_COUNTER(&htim2);
 			cntB = __HAL_TIM_GET_COUNTER(&htim3);
 
@@ -1347,17 +1413,75 @@ void Encoder(void *argument)
 			sprintf(hello,"cntA:%5d\0",cntA);
 			OLED_ShowString(10,20,hello);
 
-			sprintf(hello,"cntB:%5d\0",cntB);
-			OLED_ShowString(10,30,hello);
+			//sprintf(hello,"cntB:%5d\0",cntB);
+			//OLED_ShowString(10,30,hello);
+
+
+			short ax2, ay2, az2;
+			short gx2, gy2, gz2;
+			short mx2, my2, mz2;
+			double ax, ay, az;
+			double gx, gy, gz;
+			double mx, my, mz;
+
+			uint8_t px, py, pz;
+			MPU_Get_Accelerometer(&hi2c1, &ax2, &ay2, &az2);
+			MPU_Get_Gyroscope(&hi2c1, &gx2, &gy2, &gz2);
+
+
+
+			//short tempval = MPU_Get_Temperature(&hi2c1);
+			MPU_Get_Magnetometer(&hi2c1,&mx2,&my2,&mz2); //row pitch yaw
+
+
+
+			float roll, pitch, yaw;
+
+			gx = gx2/16.4;
+			gy = gy2/16.4;
+			gz = gz2/16.4;
+
+			mx = mx2*0.6;
+			my = my2*0.6;
+			mz = mz2*0.6;
+
+			ax = ax2/16384; //16,384
+			ay = ay2/16384; //16,384
+			az = az2/16384; //16,384
+
+			gx = gx/57.3;
+			gy = gy/57.3; // for the radian deg conversion
+			gz = gz/57.3;
+
+			double D = atan2(my, mx)*(180/PI);
+
+
+			pitch = atan2(ay,( sqrt((ax*ax)+(az*az))));
+			roll = atan2(-ax, ( sqrt((ay*ay)+(az*az))));
+
+			float Yh = (my* cos(roll)) - (mz*sin(roll));
+			float Xh = (mx *cos(pitch)) + (my * sin(roll)*sin(pitch)) + (mz * cos(roll)*sin(pitch));
+			yaw = atan2(Yh,Xh);
+
+			roll = roll*57.3; //q16??
+			pitch = pitch*57.3;
+			yaw = yaw*57.3;
+
+			px = roll;
+			py = yaw;
+			pz = D;
+
+//			sprintf(hello,"x:%5d\0",px);//commented out since it is working.
+//			OLED_ShowString(10,30,hello); //commented out since it is working.
 
 			dirA = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2);
 			dirB = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3);
 
-			sprintf(hello,"DirA:%5d\0",dirA);
-			OLED_ShowString(10,40,hello);
+//			sprintf(hello,"y:%5d\0",py); //commented out since it is working.
+//			OLED_ShowString(10,40,hello); //commented out since it is working.
 
-			sprintf(hello,"DirB:%5d\0",dirB);
-			OLED_ShowString(10,50,hello);
+//			sprintf(hello,"D:%5d\0",pz); //commented out since it is working.
+//			OLED_ShowString(10,50,hello); //commented out since it is working.
 
 //			cnt1A = __HAL_TIM_GET_COUNTER(&htim2);
 //			cnt1B = __HAL_TIM_GET_COUNTER(&htim3);

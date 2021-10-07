@@ -1,5 +1,5 @@
 PeripheralDriver/src/oled.o: ../PeripheralDriver/src/oled.c \
- C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oled.h \
+ C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/oled.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
@@ -21,13 +21,14 @@ PeripheralDriver/src/oled.o: ../PeripheralDriver/src/oled.c \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h \
+ ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
- C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oledfont.h
+ C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/oledfont.h
 
-C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oled.h:
+C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/oled.h:
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
 
@@ -71,6 +72,8 @@ C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oled.h:
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h:
 
+../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h:
+
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h:
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h:
@@ -79,4 +82,4 @@ C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oled.h:
 
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
 
-C:/Users/Toogoub/Desktop/MDP_test/MDP_test/PeripheralDriver/inc/oledfont.h:
+C:/Users/keith/STM32CubeIDE/workspace_1.7.0/MDP_test/PeripheralDriver/inc/oledfont.h:

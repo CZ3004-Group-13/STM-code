@@ -670,6 +670,9 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 //		__HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 	}
 
+	//reset counter values
+	__HAL_TIM_SET_COUNTER(&htim2,0);
+	__HAL_TIM_SET_COUNTER(&htim3,0);
 
 	 if(direction == 1){ //if forward use leftcount
 		 currentcount = leftcount;
@@ -678,9 +681,7 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 		 currentcount = rightcount;
 	 }
 
-		//reset counter values
-		__HAL_TIM_SET_COUNTER(&htim2,0);
-		__HAL_TIM_SET_COUNTER(&htim3,0);
+
 		//osDelay(100);
 		tick = HAL_GetTick(); //Provides a tick value in millisecond
 	 while(currentcount<targetcount){
@@ -797,7 +798,7 @@ void turnAngle(float distance, int direction){ //direction 0 for left, 1 for rig
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 		 while(leftcount<targetcount){ //count inner wheel distance travelled
-			 if(HAL_GetTick()-tick > 100L){
+			 if(HAL_GetTick()-tick > 50L){
 				 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
 				 tick = HAL_GetTick();
 			 }
@@ -811,7 +812,7 @@ void turnAngle(float distance, int direction){ //direction 0 for left, 1 for rig
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 		 while(rightcount<targetcount){
-			 if(HAL_GetTick()-tick > 100L){
+			 if(HAL_GetTick()-tick > 50L){
 				 righttemp = __HAL_TIM_GET_COUNTER(&htim3);
 				 rightcount = 65535 - righttemp;
 				 tick = HAL_GetTick();
@@ -1050,20 +1051,24 @@ void motor(void *argument)
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(19,2000,2000,0); //reverse
+		  		  driveDistance(17.5,2000,2000,0); //reverse
 		  		  osDelay(100);
 
 		  		  htim1.Instance->CCR4 = 57; //extreme left thrice
 		  		  osDelay(10);
-		  		  turnAngle(26,0);
+		  		  turnAngle(26.75,0);
 
 		  		  htim1.Instance->CCR4 = 81; //right
 		  		  osDelay(500);
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(9,2000,2000,0); //1900,2160
+		  		  driveDistance(7,2000,2000,0); //1900,2160
 
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 		  		  break;
@@ -1093,19 +1098,24 @@ void motor(void *argument)
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(16,2000,2000,0); //reverse
+		  		  driveDistance(13,2000,2000,0); //reverse
 		  		  osDelay(100);
 
 		  		  htim1.Instance->CCR4 = 88; //extreme right thrice
 		  		  osDelay(10);
-		  		  turnAngle(17.5,1);
+		  		  turnAngle(18.75,1);
 
 		  		  htim1.Instance->CCR4 = 81; //right
 		  		  osDelay(500);
 		  		  htim1.Instance->CCR4 = 70; //center
 		  		  osDelay(100);
 
-		  		  driveDistance(6,2000,2000,0); //1900,2160
+		  		  driveDistance(4,2000,2000,0); //1900,2160
+
+		  		  htim1.Instance->CCR4 = 81; //right
+		  		  osDelay(500);
+		  		  htim1.Instance->CCR4 = 70; //center
+		  		  osDelay(100);
 
 		  		  i = sep_index + 1;
 		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);

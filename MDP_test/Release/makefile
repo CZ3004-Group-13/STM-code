@@ -69,8 +69,8 @@ all: main-build
 main-build: MDP_test.elf secondary-outputs
 
 # Tool invocations
-MDP_test.elf: $(OBJS) $(USER_OBJS) C:\Users\Toogoub\Desktop\MDP_test\MDP_test\STM32F103VETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "MDP_test.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\Toogoub\Desktop\MDP_test\MDP_test\STM32F103VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="MDP_test.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+MDP_test.elf: $(OBJS) $(USER_OBJS) C:\Users\keith\STM32CubeIDE\workspace_1.7.0\MDP_test\STM32F103VETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "MDP_test.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\keith\STM32CubeIDE\workspace_1.7.0\MDP_test\STM32F103VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="MDP_test.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

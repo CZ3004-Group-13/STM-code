@@ -641,10 +641,10 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 ///////////////////PID CONFIGURATION///////////////////////////////////////////////////////
 	PID_TypeDef pidControlDiff;
 
-	PID(&pidControlDiff, &error, &offset, 0, 150, 0, 1.4, _PID_P_ON_E, _PID_CD_DIRECT);
+	PID(&pidControlDiff, &error, &offset, 0, 0, 0, 0, _PID_P_ON_E, _PID_CD_DIRECT);//150,0,1.4, and 8,0.01,1
 	PID_SetMode(&pidControlDiff, _PID_MODE_AUTOMATIC);
 	PID_SetSampleTime(&pidControlDiff, 10);
-	PID_SetOutputLimits(&pidControlDiff, -600, 600);
+	PID_SetOutputLimits(&pidControlDiff, -400, 400); //600
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 	if(direction == 1){ //forward
@@ -891,7 +891,7 @@ void motor(void *argument)
 	  float dist;
 
 	  uint8_t left_turn_amount = 40;
-	  uint8_t right_turn_amount = 245;
+	  uint8_t right_turn_amount = 220; //230
 	  uint8_t straight_dist_amount = 5;
 	  uint8_t straight_obstacle_amount = 50;
 
@@ -933,7 +933,8 @@ void motor(void *argument)
 		  {
 		  	  case 'w': //forward by dist
 		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
-		  		  driveDistance(dist,3000,3000,1); //2200,2000 hardcode
+		  		  dist = 150;
+		  		  driveDistance(dist,4000,4000,1); //4000,3150 hardcode
 
 		  		  i = sep_index + 1;
 
@@ -1143,9 +1144,9 @@ void motor(void *argument)
 					break;
 
 		  	  case 'c':
-		  			htim1.Instance->CCR4 = 81; //right
+		  			htim1.Instance->CCR4 = 84; //right
 		  			osDelay(500);
-		  			htim1.Instance->CCR4 = 70; //center
+		  			htim1.Instance->CCR4 = 71; //center changed from 70
 		  			osDelay(10);
 		  			i = sep_index + 1;
 					//choice = aRxBuffer[i];
@@ -1154,16 +1155,16 @@ void motor(void *argument)
 
 		  	  case 'T':
 		          // go straight X amount
-		          driveDistance(dist,5000,5000,1);
+		          driveDistance(dist,4000,4000,1); //4000,3150 before keith adjust wheels
 
 		            // first left turn (non 90°) (1)
 		          htim1.Instance->CCR4 = 57; //extreme left once
 		          osDelay(10);
-		          turnAngle(left_turn_amount,0);
+		          turnAngle(left_turn_amount-3,0);
 
 		          htim1.Instance->CCR4 = 81; //right
-		          osDelay(500);
-		          htim1.Instance->CCR4 = 70; //center
+		          osDelay(300);
+		          htim1.Instance->CCR4 = 71; //center
 		          osDelay(100);
 
 		            // go straight fixed amount (2)
@@ -1174,9 +1175,9 @@ void motor(void *argument)
 		          osDelay(10);
 		          turnAngle(right_turn_amount,1);
 
-		          htim1.Instance->CCR4 = 81; //right
-		          osDelay(500);
-		          htim1.Instance->CCR4 = 70; //center
+//		          htim1.Instance->CCR4 = 81; //right
+//		          osDelay(300);
+		          htim1.Instance->CCR4 = 71; //center
 		          osDelay(100);
 
 		            // go straight fixed amount (2)
@@ -1185,15 +1186,15 @@ void motor(void *argument)
 		            // left turn (1)
 		              htim1.Instance->CCR4 = 57; //extreme left once
 		          osDelay(10);
-		          turnAngle(left_turn_amount,0);
+		          turnAngle(left_turn_amount-5,0);
 
 		          htim1.Instance->CCR4 = 81; //right
-		          osDelay(500);
-		          htim1.Instance->CCR4 = 70; //center
+		          osDelay(300);
+		          htim1.Instance->CCR4 = 71; //center
 		          osDelay(100);
 
 		            // straight X amount back into car park
-		          driveDistance(dist-5,5000,5000,1);
+		          driveDistance(dist-5,4000,4000,1);
 		  		  i = sep_index + 1;
 
 

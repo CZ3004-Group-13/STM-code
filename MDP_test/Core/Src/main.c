@@ -891,7 +891,7 @@ void motor(void *argument)
 	  float dist;
 
 	  uint8_t left_turn_amount = 40;
-	  uint8_t right_turn_amount = 220; //230
+	  uint8_t right_turn_amount = 230; //230
 	  uint8_t straight_dist_amount = 5;
 	  uint8_t straight_obstacle_amount = 50;
 
@@ -1155,7 +1155,7 @@ void motor(void *argument)
 
 		  	  case 'T':
 		          // go straight X amount
-		          driveDistance(dist,4000,4000,1); //4000,3150 before keith adjust wheels
+		          driveDistance(dist,4000,3600,1); //4000,3150 before keith adjust wheels
 
 		            // first left turn (non 90°) (1)
 		          htim1.Instance->CCR4 = 57; //extreme left once
@@ -1194,7 +1194,7 @@ void motor(void *argument)
 		          osDelay(100);
 
 		            // straight X amount back into car park
-		          driveDistance(dist-5,4000,4000,1);
+		          driveDistance(dist-5,4000,3600,1);
 		  		  i = sep_index + 1;
 
 
@@ -1410,20 +1410,30 @@ void Encoder(void *argument)
 //			 }
 
 			//display total pulses of A and B
-			sprintf(hello,"cntA:%5d\0",cntA);
+
+			sprintf(hello,"ANALYSIS");
 			OLED_ShowString(10,20,hello);
 
-			sprintf(hello,"cntB:%5d\0",cntB);
+			sprintf(hello,"COMPLETE...");
 			OLED_ShowString(10,30,hello);
+
+			sprintf(hello,"READY!");
+			OLED_ShowString(10,40,hello);
+
+//			sprintf(hello,"cntA:%5d\0",cntA);
+//			OLED_ShowString(10,20,hello);
+//
+//			sprintf(hello,"cntB:%5d\0",cntB);
+//			OLED_ShowString(10,30,hello);
 
 			dirA = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2);
 			dirB = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3);
 
-			sprintf(hello,"DirA:%5d\0",dirA);
-			OLED_ShowString(10,40,hello);
-
-			sprintf(hello,"DirB:%5d\0",dirB);
-			OLED_ShowString(10,50,hello);
+//			sprintf(hello,"DirA:%5d\0",dirA);
+//			OLED_ShowString(10,40,hello);
+//
+//			sprintf(hello,"DirB:%5d\0",dirB);
+//			OLED_ShowString(10,50,hello);
 
 //			cnt1A = __HAL_TIM_GET_COUNTER(&htim2);
 //			cnt1B = __HAL_TIM_GET_COUNTER(&htim3);

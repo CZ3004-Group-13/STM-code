@@ -641,10 +641,10 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 ///////////////////PID CONFIGURATION///////////////////////////////////////////////////////
 	PID_TypeDef pidControlDiff;
 
-	PID(&pidControlDiff, &error, &offset, 0, 150, 0, 1.4, _PID_P_ON_E, _PID_CD_DIRECT);
+	PID(&pidControlDiff, &error, &offset, 0, 0, 0, 0, _PID_P_ON_E, _PID_CD_DIRECT);//150,0,1.4, and 8,0.01,1
 	PID_SetMode(&pidControlDiff, _PID_MODE_AUTOMATIC);
 	PID_SetSampleTime(&pidControlDiff, 10);
-	PID_SetOutputLimits(&pidControlDiff, -400, 400);
+	PID_SetOutputLimits(&pidControlDiff, -400, 400); //600
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 	if(direction == 1){ //forward
@@ -685,7 +685,7 @@ void driveDistance(float distance, uint16_t A, uint16_t B, int direction){
 		//osDelay(100);
 		tick = HAL_GetTick(); //Provides a tick value in millisecond
 	 while(currentcount<targetcount){
-		 if(HAL_GetTick()-tick > 50L){
+		 if(HAL_GetTick()-tick > 30L){
 			 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
 			 rightcount = __HAL_TIM_GET_COUNTER(&htim3);
 
@@ -791,28 +791,28 @@ void turnAngle(float distance, int direction){ //direction 0 for left, 1 for rig
 	 tick = HAL_GetTick(); //Provides a tick value in millisecond
 
 	 if(direction == 0){ //left turn
-		 pwmValA = 1500; //500
-		 pwmValB = 1500; //1500
+		 pwmValA = 4000; //500
+		 pwmValB = 4000; //1500
 
 		 // Modify the comparison value for the duty cycle
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 		 while(leftcount<targetcount){ //count inner wheel distance travelled
-			 if(HAL_GetTick()-tick > 50L){
+			 if(HAL_GetTick()-tick > 30L){
 				 leftcount = __HAL_TIM_GET_COUNTER(&htim2);
 				 tick = HAL_GetTick();
 			 }
 		 }
 	 }
 	 else if(direction == 1){ //right turn
-		 pwmValA = 1500;
-		 pwmValB = 1500;
+		 pwmValA = 4000;
+		 pwmValB = 4000;
 
 		 // Modify the comparison value for the duty cycle
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_1,pwmValA);
 		 __HAL_TIM_SetCompare(&htim8,TIM_CHANNEL_2,pwmValB);
 		 while(rightcount<targetcount){
-			 if(HAL_GetTick()-tick > 50L){
+			 if(HAL_GetTick()-tick > 30L){
 				 righttemp = __HAL_TIM_GET_COUNTER(&htim3);
 				 rightcount = 65535 - righttemp;
 				 tick = HAL_GetTick();
@@ -887,8 +887,13 @@ void motor(void *argument)
 	  uint16_t pwmValA = 0;
 	  uint16_t pwmValB = 0;
 	  choice = aRxBuffer[i];
-	  uint8_t done[] = "done";
+	  uint8_t done[] = "DONE";
 	  float dist;
+
+	  uint8_t left_turn_amount = 40;
+	  uint8_t right_turn_amount = 230; //230
+	  uint8_t straight_dist_amount = 5;
+	  uint8_t straight_obstacle_amount = 50;
 
 	  HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_1); //start motorA
 	  HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_2); //start motorB
@@ -901,7 +906,7 @@ void motor(void *argument)
 //			  memset(aRxBuffer, 0, sizeof(aRxBuffer)); // Reset array
 //			  sep_index = 0;
 //			  i = 0;
-//		  }
+//		  }T|
 		  //i=0;
 		  //HAL_UART_Receive_IT(&huart3,(uint8_t *) aRxBuffer,4);
 
@@ -928,7 +933,8 @@ void motor(void *argument)
 		  {
 		  	  case 'w': //forward by dist
 		  		  //HAL_UART_Transmit(&huart3,(uint8_t *)&done,1,0xFFFF);
-		  		  driveDistance(dist,3000,3000,1); //2200,2000 hardcode
+		  		  dist = 150;
+		  		  driveDistance(dist,4000,4000,1); //4000,3150 hardcode
 
 		  		  i = sep_index + 1;
 
@@ -1138,14 +1144,63 @@ void motor(void *argument)
 					break;
 
 		  	  case 'c':
-		  			htim1.Instance->CCR4 = 81; //right
+		  			htim1.Instance->CCR4 = 84; //right
 		  			osDelay(500);
-		  			htim1.Instance->CCR4 = 70; //center
+		  			htim1.Instance->CCR4 = 71; //center changed from 70
 		  			osDelay(10);
 		  			i = sep_index + 1;
 					//choice = aRxBuffer[i];
 			  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
 					break;
+
+		  	  case 'T':
+		          // go straight X amount
+		          driveDistance(dist,4000,3600,1); //4000,3150 before keith adjust wheels
+
+		            // first left turn (non 90°) (1)
+		          htim1.Instance->CCR4 = 57; //extreme left once
+		          osDelay(10);
+		          turnAngle(left_turn_amount-3,0);
+
+		          htim1.Instance->CCR4 = 81; //right
+		          osDelay(300);
+		          htim1.Instance->CCR4 = 71; //center
+		          osDelay(100);
+
+		            // go straight fixed amount (2)
+		          //driveDistance(straight_dist_amount,4000,4000,1);
+
+		            // turn right to be parallel to obstacle (3)
+		              htim1.Instance->CCR4 = 86; //extreme right once
+		          osDelay(10);
+		          turnAngle(right_turn_amount,1);
+
+//		          htim1.Instance->CCR4 = 81; //right
+//		          osDelay(300);
+		          htim1.Instance->CCR4 = 71; //center
+		          osDelay(100);
+
+		            // go straight fixed amount (2)
+		          //driveDistance(straight_dist_amount,4000,4000,1);
+
+		            // left turn (1)
+		              htim1.Instance->CCR4 = 57; //extreme left once
+		          osDelay(10);
+		          turnAngle(left_turn_amount-5,0);
+
+		          htim1.Instance->CCR4 = 81; //right
+		          osDelay(300);
+		          htim1.Instance->CCR4 = 71; //center
+		          osDelay(100);
+
+		            // straight X amount back into car park
+		          driveDistance(dist-5,4000,3600,1);
+		  		  i = sep_index + 1;
+
+
+		  		  HAL_UART_Transmit(&huart3,(uint8_t *)&done,5,0xFFFF);
+
+		  		  break;
 //		  	  case 'g':  //aQCcWCbBC
 //					pwmValA = 800;
 //					pwmValB = 825;
@@ -1221,6 +1276,7 @@ void motor(void *argument)
 //					HAL_UART_Transmit(&huart3,(uint8_t *)&ch,1,0xFFFF);
 //					break;
 //
+
 				  default:
 					  //i++;
 					 // choice = aRxBuffer[i];
@@ -1354,20 +1410,30 @@ void Encoder(void *argument)
 //			 }
 
 			//display total pulses of A and B
-			sprintf(hello,"cntA:%5d\0",cntA);
+
+			sprintf(hello,"ANALYSIS");
 			OLED_ShowString(10,20,hello);
 
-			sprintf(hello,"cntB:%5d\0",cntB);
+			sprintf(hello,"COMPLETE...");
 			OLED_ShowString(10,30,hello);
+
+			sprintf(hello,"READY!");
+			OLED_ShowString(10,40,hello);
+
+//			sprintf(hello,"cntA:%5d\0",cntA);
+//			OLED_ShowString(10,20,hello);
+//
+//			sprintf(hello,"cntB:%5d\0",cntB);
+//			OLED_ShowString(10,30,hello);
 
 			dirA = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2);
 			dirB = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3);
 
-			sprintf(hello,"DirA:%5d\0",dirA);
-			OLED_ShowString(10,40,hello);
-
-			sprintf(hello,"DirB:%5d\0",dirB);
-			OLED_ShowString(10,50,hello);
+//			sprintf(hello,"DirA:%5d\0",dirA);
+//			OLED_ShowString(10,40,hello);
+//
+//			sprintf(hello,"DirB:%5d\0",dirB);
+//			OLED_ShowString(10,50,hello);
 
 //			cnt1A = __HAL_TIM_GET_COUNTER(&htim2);
 //			cnt1B = __HAL_TIM_GET_COUNTER(&htim3);
